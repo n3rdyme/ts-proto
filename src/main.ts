@@ -36,7 +36,7 @@ import {
 } from './types';
 import { asSequence } from 'sequency';
 import SourceInfo, { Fields } from './sourceInfo';
-import { optionsFromParameter, singular } from './utils';
+import { optionsFromParameter, singular, cleanComment } from './utils';
 import DescriptorProto = google.protobuf.DescriptorProto;
 import FieldDescriptorProto = google.protobuf.FieldDescriptorProto;
 import FileDescriptorProto = google.protobuf.FileDescriptorProto;
@@ -54,9 +54,6 @@ export type Options = {
   toFromJson: boolean;
   serviceStub: boolean;
 };
-
-// addJavadoc will attempt to expand unescaped percent %, so we replace these within source comments.
-const PercentAll = /\%/g;
 
 export function generateFile(typeMap: TypeMap, fileDesc: FileDescriptorProto, parameter: string): FileSpec {
   const options = optionsFromParameter(parameter);
@@ -260,14 +257,14 @@ function addTimestampMethods(file: FileSpec, options: Options): FileSpec {
 function generateEnum(fullName: string, enumDesc: EnumDescriptorProto, sourceInfo: SourceInfo): EnumSpec {
   let spec = EnumSpec.create(fullName).addModifiers(Modifier.EXPORT);
   if (sourceInfo.leadingComments) {
-    spec = spec.addJavadoc(sourceInfo.leadingComments.replace(PercentAll, '%%'));
+    spec = spec.addJavadoc(cleanComment(sourceInfo.leadingComments));
   }
 
   let index = 0;
   for (const valueDesc of enumDesc.value) {
     const info = sourceInfo.lookup(Fields.enum.value, index++);
     if (info.leadingComments) {
-      spec = spec.addJavadoc(`${valueDesc.name} - ${info.leadingComments.trim()}\n`.replace(PercentAll, '%%'));
+      spec = spec.addJavadoc(cleanComment(`${valueDesc.name} - ${info.leadingComments.trim()}\n`));
     }
     spec = spec.addConstant(valueDesc.name, valueDesc.number.toString());
   }
@@ -319,7 +316,7 @@ function generateInterfaceDeclaration(
 ) {
   let message = InterfaceSpec.create(fullName).addModifiers(Modifier.EXPORT);
   if (sourceInfo.leadingComments) {
-    message = message.addJavadoc(sourceInfo.leadingComments.replace(PercentAll, '%%'));
+    message = message.addJavadoc(cleanComment(sourceInfo.leadingComments));
   }
 
   let index = 0;
@@ -331,7 +328,7 @@ function generateInterfaceDeclaration(
 
     const info = sourceInfo.lookup(Fields.message.field, index++);
     if (info.leadingComments) {
-      prop = prop.addJavadoc(info.leadingComments.replace(PercentAll, '%%'));
+      prop = prop.addJavadoc(cleanComment(info.leadingComments));
     }
 
     message = message.addProperty(prop);
@@ -854,7 +851,7 @@ function generateService(
     service = service.addTypeVariable(contextTypeVar);
   }
   if (sourceInfo.leadingComments) {
-    service = service.addJavadoc(sourceInfo.leadingComments.replace(PercentAll, '%%'));
+    service = service.addJavadoc(cleanComment(sourceInfo.leadingComments));
   }
 
   let index = 0;
@@ -865,7 +862,7 @@ function generateService(
     }
     const info = sourceInfo.lookup(Fields.service.method, index++);
     if (info.leadingComments) {
-      requestFn = requestFn.addJavadoc(info.leadingComments.replace(PercentAll, '%%'));
+      requestFn = requestFn.addJavadoc(cleanComment(info.leadingComments));
     }
     requestFn = requestFn.addParameter('request', requestType(typeMap, methodDesc));
     requestFn = requestFn.returns(responsePromise(typeMap, methodDesc));
